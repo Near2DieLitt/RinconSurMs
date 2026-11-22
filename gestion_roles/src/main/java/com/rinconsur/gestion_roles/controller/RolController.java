@@ -5,6 +5,8 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.rinconsur.gestion_roles.dto.MensajeResponse;
+import com.rinconsur.gestion_roles.dto.RolRequest;
 import com.rinconsur.gestion_roles.model.Rol;
 import com.rinconsur.gestion_roles.service.RolService;
 
@@ -36,17 +38,13 @@ public class RolController {
         try {
             return ResponseEntity.ok(rolService.buscarPorCodigo(codigo));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(404).body(Map.of("mensaje", e.getMessage()));
+            return ResponseEntity.status(404).body(new MensajeResponse(e.getMessage()));
         }
     }
 
     @Operation(summary = "Crear un nuevo rol", description = "Guarda un nuevo perfil en la base de datos.")
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody Rol rol) {
-        try {
-            return ResponseEntity.ok(rolService.guardar(rol));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("mensaje", e.getMessage()));
-        }
+    public ResponseEntity<?> crear(@RequestBody RolRequest rol) {
+        return ResponseEntity.ok(rolService.guardar(rol.toEntity()));
     }
 }
