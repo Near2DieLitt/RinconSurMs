@@ -1,0 +1,9 @@
+CREATE DATABASE IF NOT EXISTS rinconsur_roles CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS rinconsur_usuarios CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS rinconsur_sesiones CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS rinconsur_visitantes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS rinconsur_analitica CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';
+FLUSH PRIVILEGES;

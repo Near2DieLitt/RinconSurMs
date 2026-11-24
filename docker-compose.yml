@@ -1,0 +1,128 @@
+services:
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    restart: on-failure
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8800:8800"
+    environment:
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    restart: on-failure
+
+  gestion-roles:
+    build:
+      context: ./gestion_roles
+      dockerfile: Dockerfile
+    container_name: gestion-roles
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/rinconsur_roles?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=America/Santiago&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-}
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  gestion-usuarios:
+    build:
+      context: ./gestion_usuarios
+      dockerfile: Dockerfile
+    container_name: gestion-usuarios
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/rinconsur_usuarios?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=America/Santiago&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-}
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+      - NOTIFICACIONES_URL=http://gestion-notificaciones:8083
+    depends_on:
+      - eureka-server
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  gestion-notificaciones:
+    build:
+      context: ./gestion_notificaciones
+      dockerfile: Dockerfile
+    container_name: gestion-notificaciones
+    ports:
+      - "8083:8083"
+    environment:
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  gestion-sesiones:
+    build:
+      context: ./gestion_sesiones
+      dockerfile: Dockerfile
+    container_name: gestion-sesiones
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/rinconsur_sesiones?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=America/Santiago&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-}
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  gestion-visitantes:
+    build:
+      context: ./gestion_visitantes
+      dockerfile: Dockerfile
+    container_name: gestion-visitantes
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/rinconsur_visitantes?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=America/Santiago&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-}
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  gestion-analitica:
+    build:
+      context: ./gestion_analitica
+      dockerfile: Dockerfile
+    container_name: gestion-analitica
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/rinconsur_analitica?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=America/Santiago&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-}
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
