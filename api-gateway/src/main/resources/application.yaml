@@ -6,31 +6,33 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:
-        - id: ruta-roles
-          uri: lb://gestion-roles
-          predicates:
-            - Path=/api/roles,/api/roles/**
-        - id: ruta-usuarios
-          uri: lb://gestion-usuarios
-          predicates:
-            - Path=/api/usuarios,/api/usuarios/**
-        - id: ruta-notificaciones
-          uri: lb://gestion-notificaciones
-          predicates:
-            - Path=/api/notificaciones,/api/notificaciones/**
-        - id: ruta-sesiones
-          uri: lb://gestion-sesiones
-          predicates:
-            - Path=/api/sesiones,/api/sesiones/**
-        - id: ruta-visitantes
-          uri: lb://gestion-visitantes
-          predicates:
-            - Path=/api/visitantes,/api/visitantes/**
-        - id: ruta-analitica
-          uri: lb://gestion-analitica
-          predicates:
-            - Path=/api/analitica,/api/analitica/**
+      server:
+        webmvc:
+          routes:
+            - id: ruta-roles
+              uri: lb://gestion-roles
+              predicates:
+                - Path=/api/roles,/api/roles/**
+            - id: ruta-usuarios
+              uri: lb://gestion-usuarios
+              predicates:
+                - Path=/api/usuarios,/api/usuarios/**
+            - id: ruta-notificaciones
+              uri: lb://gestion-notificaciones
+              predicates:
+                - Path=/api/notificaciones,/api/notificaciones/**
+            - id: ruta-sesiones
+              uri: lb://gestion-sesiones
+              predicates:
+                - Path=/api/sesiones,/api/sesiones/**
+            - id: ruta-visitantes
+              uri: lb://gestion-visitantes
+              predicates:
+                - Path=/api/visitantes,/api/visitantes/**
+            - id: ruta-analitica
+              uri: lb://gestion-analitica
+              predicates:
+                - Path=/api/analitica,/api/analitica/**
 
 eureka:
   client:
