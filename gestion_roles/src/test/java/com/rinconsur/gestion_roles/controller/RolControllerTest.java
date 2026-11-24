@@ -1,55 +1,111 @@
 package com.rinconsur.gestion_roles.controller;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rinconsur.gestion_roles.dto.RolRequest;
 import com.rinconsur.gestion_roles.model.Rol;
 import com.rinconsur.gestion_roles.service.RolService;
 
-
-@ExtendWith(MockitoExtension.class)
-@DisplayName("Tests de RolController")
+@WebMvcTest(RolController.class)
+@DisplayName("Tests del RolController con MockMvc")
 public class RolControllerTest {
 
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
     private RolService rolService;
 
-    @InjectMocks
-    private RolController rolController;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Rol rolAdmin;
+    private RolRequest request;
 
     @BeforeEach
     void setUp() {
         rolAdmin = new Rol(1L, "P-01", "Administrador", "ADMIN", true, false, false);
+
+        request = new RolRequest();
+        request.setCodigo("P-01");
+        request.setNombre("Administrador");
+        request.setRolSistema("ADMIN");
+        request.setPuedeGestionarUsuarios(true);
+        request.setPuedeCrearSesiones(false);
+        request.setPuedeHacerConteos(false);
     }
 
     @Test
-    @DisplayName("GET y POST /api/roles retornan códigos HTTP esperados")
-    void endpointsRolController() {
+    @DisplayName("GET /api/roles debe retornar 200 con la lista de roles")
+    void listar_debeRetornar200() throws Exception {
         when(rolService.listarTodos()).thenReturn(List.of(rolAdmin));
+
+        mockMvc.perform(get("/api/roles")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].codigo").value("P-01"))
+                .andExpect(jsonPath("$[0].nombre").value("Administrador"));
+    }
+
+    @Test
+    @DisplayName("GET /api/roles/{codigo} debe retornar 200 cuando existe")
+    void obtenerPorCodigo_debeRetornar200() throws Exception {
         when(rolService.buscarPorCodigo("P-01")).thenReturn(rolAdmin);
-        when(rolService.buscarPorCodigo("P-99")).thenThrow(new IllegalArgumentException("No existe"));
-        when(rolService.guardar(any())).thenReturn(rolAdmin);
 
-        assertEquals(200, rolController.listar().getStatusCode().value());
-        assertEquals(200, rolController.obtenerPorCodigo("P-01").getStatusCode().value());
-        assertEquals(404, rolController.obtenerPorCodigo("P-99").getStatusCode().value());
-        assertEquals(200, rolController.crear(new RolRequest()).getStatusCode().value());
+        mockMvc.perform(get("/api/roles/P-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value("P-01"));
+    }
 
-        when(rolService.guardar(any())).thenThrow(new IllegalArgumentException("Error"));
-        assertEquals(400, rolController.crear(new RolRequest()).getStatusCode().value());
+    @Test
+    @DisplayName("GET /api/roles/{codigo} debe retornar 404 cuando no existe")
+    void obtenerPorCodigo_debeRetornar404() throws Exception {
+        when(rolService.buscarPorCodigo("P-99"))
+                .thenThrow(new IllegalArgumentException("Perfil no encontrado: P-99"));
+
+        mockMvc.perform(get("/api/roles/P-99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.mensaje").value("Perfil no encontrado: P-99"));
+    }
+
+    @Test
+    @DisplayName("POST /api/roles debe retornar 200 al crear un rol valido")
+    void crear_debeRetornar200() throws Exception {
+        when(rolService.guardar(any(Rol.class))).thenReturn(rolAdmin);
+
+        mockMvc.perform(post("/api/roles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value("P-01"));
+    }
+
+    @Test
+    @DisplayName("POST /api/roles debe retornar 400 cuando los datos son invalidos")
+    void crear_debeRetornar400_cuandoDatosInvalidos() throws Exception {
+        when(rolService.guardar(any(Rol.class)))
+                .thenThrow(new IllegalArgumentException("El código del perfil es obligatorio"));
+
+        mockMvc.perform(post("/api/roles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RolRequest())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El código del perfil es obligatorio"));
     }
 }

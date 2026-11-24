@@ -1,99 +1,110 @@
 package com.rinconsur.gestion_analitica.service;
 
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
+
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import org.springframework.http.ResponseEntity;
-
-import com.rinconsur.gestion_analitica.controller.AnaliticaController;
-import com.rinconsur.gestion_analitica.dto.RegistroFlujoRequest;
 import com.rinconsur.gestion_analitica.exception.RecursoNoEncontradoException;
 import com.rinconsur.gestion_analitica.model.RegistroFlujo;
 import com.rinconsur.gestion_analitica.repository.RegistroFlujoRepository;
 
-import java.util.Map;
-
 @ExtendWith(MockitoExtension.class)
-class AnaliticaServiceTest {
+@DisplayName("Test Unit de AnaliticaService")
+public class AnaliticaServiceTest {
 
     @Mock
-    private RegistroFlujoRepository repository;
+    private RegistroFlujoRepository flujoRep;
+
     @InjectMocks
-    private AnaliticaService service;
-    private AnaliticaController controller;
+    private AnaliticaService analiticaService;
 
-    @BeforeEach
-    void setUp() {
-        controller = new AnaliticaController(service);
+    @Test
+    @DisplayName("obtenerPorRango() consulta activos, todos y valida fechas")
+    void obtenerPorRango_debeRetornarRegistrosYValidarFechas() {
+        RegistroFlujo r = new RegistroFlujo(1L, "A1", "2026-11-19", 100, 40, 20, 20, 20, true, 1L);
+        when(flujoRep.findByFechaBetweenAndActivoTrueOrderByFechaDesc("2026-11-01", "2026-11-30")).thenReturn(List.of(r));
+        when(flujoRep.findByFechaBetweenOrderByFechaDesc("2026-11-01", "2026-11-30")).thenReturn(List.of(r));
+
+        assertEquals(1, analiticaService.obtenerPorRango("2026-11-01", "2026-11-30", false).size());
+        assertEquals(1, analiticaService.obtenerPorRango("2026-11-01", "2026-11-30", true).size());
+
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.obtenerPorRango("2026-12-01", "2026-11-01", false));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.obtenerPorRango("mal", "2026-11-01", false));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.obtenerPorRango(null, "2026-11-01", false));
     }
 
     @Test
-    void listarRegistrarLoteYValidaciones() {
-        RegistroFlujo r = new RegistroFlujo(1L, "A1", "2026-11-19", 100, 40, 20, 20, 20, true, 1L);
-        when(repository.findByFechaBetweenAndActivoTrueOrderByFechaDesc("2026-11-01", "2026-11-30")).thenReturn(List.of(r));
-        when(repository.findByFechaBetweenOrderByFechaDesc("2026-11-01", "2026-11-30")).thenReturn(List.of(r));
-        when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(repository.count()).thenReturn(0L);
+    @DisplayName("registrar() guarda flujo valido y valida reglas de negocio")
+    void registrar_debeGuardarYValidarReglas() {
+        when(flujoRep.save(any(RegistroFlujo.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertEquals(200, controller.listar("2026-11-01", "2026-11-30", false).getStatusCode().value());
-        assertEquals(200, controller.listar("2026-11-01", "2026-11-30", true).getStatusCode().value());
-        assertThrows(IllegalArgumentException.class, () -> controller.listar("2026-12-01", "2026-11-01", false));
-        assertThrows(IllegalArgumentException.class, () -> controller.listar("mal", "2026-11-01", false));
+        RegistroFlujo valido = new RegistroFlujo(5L, " a1 ", "2026-11-19", 100, 40, 20, 20, 20, false, 1L);
+        RegistroFlujo guardado = analiticaService.registrar(valido);
+        assertNull(guardado.getId());
+        assertEquals("A1", guardado.getAcceso());
+        assertTrue(guardado.isActivo());
 
-        assertEquals(200, registrar(r).getStatusCode().value());
-        assertEquals(1, registrarLote(List.of(r)).getBody().get("insertados"));
+        RegistroFlujo soloCompradores = new RegistroFlujo(null, "A2", "2026-11-19", 0, 5, 0, 0, 0, true, null);
+        assertNotNull(analiticaService.registrar(soloCompradores));
 
-        when(repository.count()).thenReturn(5L);
-        assertEquals(0, registrarLote(List.of(r)).getBody().get("insertados"));
-
-        assertThrows(IllegalArgumentException.class, () -> registrar(new RegistroFlujo(null, "Z9", "2026-11-19", 10, 1, 1, 1, 1, true, null)));
-        assertThrows(IllegalArgumentException.class, () -> registrar(new RegistroFlujo(null, "A1", "2026-11-19", 0, 0, 0, 0, 0, true, null)));
-        assertThrows(IllegalArgumentException.class, () -> registrar(new RegistroFlujo(null, "A1", "2026-11-19", -1, 0, 0, 0, 0, true, null)));
-        assertThrows(IllegalArgumentException.class, () -> registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 20, 0, 0, 0, true, null)));
-        assertThrows(IllegalArgumentException.class, () -> registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 1, 5, 5, 5, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, null, "2026-11-19", 10, 1, 1, 1, 1, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "Z9", "2026-11-19", 10, 1, 1, 1, 1, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "mal", 10, 1, 1, 1, 1, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", -1, 0, 0, 0, 0, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, -1, 0, 0, 0, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 1, -1, 0, 0, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 1, 0, -1, 0, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 1, 0, 0, -1, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 0, 0, 0, 0, 0, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 20, 0, 0, 0, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> analiticaService.registrar(new RegistroFlujo(null, "A1", "2026-11-19", 10, 1, 5, 5, 5, true, null)));
     }
 
     @Test
-    void cambiarActivoExistenteYNoExistente() {
-        RegistroFlujo r = new RegistroFlujo(1L, "A1", "2026-11-19", 100, 40, 20, 20, 20, true, 1L);
-        when(repository.findById(1L)).thenReturn(Optional.of(r));
-        when(repository.findById(99L)).thenReturn(Optional.empty());
-        when(repository.findFirstByIdLocalOrderByIdDesc(99L)).thenReturn(Optional.empty());
-        when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+    @DisplayName("registrarLote() inserta si esta vacia y retorna 0 si ya tiene registros")
+    void registrarLote_debeInsertarSoloSiEstaVacia() {
+        RegistroFlujo r = new RegistroFlujo(null, "A1", "2026-11-19", 100, 40, 20, 20, 20, true, 1L);
+        when(flujoRep.count()).thenReturn(0L);
+        when(flujoRep.save(any(RegistroFlujo.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertEquals(200, controller.cambiarActivo(1L, false).getStatusCode().value());
-        assertThrows(RecursoNoEncontradoException.class, () -> controller.cambiarActivo(99L, false));
+        assertEquals(1, analiticaService.registrarLote(List.of(r)));
+
+        when(flujoRep.count()).thenReturn(3L);
+        assertEquals(0, analiticaService.registrarLote(List.of(r)));
     }
 
-    private RegistroFlujoRequest req(RegistroFlujo f) {
-        RegistroFlujoRequest r = new RegistroFlujoRequest();
-        r.setAcceso(f.getAcceso());
-        r.setFecha(f.getFecha());
-        r.setIngresos(f.getIngresos());
-        r.setCompradores(f.getCompradores());
-        r.setTransitoJoven(f.getTransitoJoven());
-        r.setTransitoAdulto(f.getTransitoAdulto());
-        r.setTransitoMayor(f.getTransitoMayor());
-        r.setActivo(f.isActivo());
-        r.setIdLocal(f.getIdLocal());
-        return r;
-    }
+    @Test
+    @DisplayName("cambiarActivo() busca por id o idLocal y lanza RecursoNoEncontradoException si no existe")
+    void cambiarActivo_debeActualizarOLanzarExcepcion() {
+        RegistroFlujo r = new RegistroFlujo(1L, "A1", "2026-11-19", 100, 40, 20, 20, 20, true, 10L);
+        when(flujoRep.findById(1L)).thenReturn(Optional.of(r));
+        when(flujoRep.findById(10L)).thenReturn(Optional.empty());
+        when(flujoRep.findFirstByIdLocalOrderByIdDesc(10L)).thenReturn(Optional.of(r));
+        when(flujoRep.findById(99L)).thenReturn(Optional.empty());
+        when(flujoRep.findFirstByIdLocalOrderByIdDesc(99L)).thenReturn(Optional.empty());
+        when(flujoRep.save(any(RegistroFlujo.class))).thenAnswer(i -> i.getArgument(0));
 
-    private ResponseEntity<?> registrar(RegistroFlujo f) {
-        return controller.registrar(req(f));
-    }
+        assertFalse(analiticaService.cambiarActivo(1L, false).isActivo());
+        assertTrue(analiticaService.cambiarActivo(10L, true).isActivo());
+        verify(flujoRep, times(1)).findFirstByIdLocalOrderByIdDesc(10L);
 
-    private ResponseEntity<Map<String, Integer>> registrarLote(List<RegistroFlujo> lista) {
-        return controller.registrarLote(lista.stream().map(this::req).toList());
+        assertThrows(RecursoNoEncontradoException.class, () -> analiticaService.cambiarActivo(99L, false));
     }
 }

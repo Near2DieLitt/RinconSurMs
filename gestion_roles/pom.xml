@@ -11,7 +11,7 @@
 	<groupId>com.rinconsur</groupId>
 	<artifactId>gestion_roles</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
+	<name>gestion_roles</name>
 	<description/>
 	<url/>
 	<licenses>
@@ -80,6 +80,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -161,7 +166,7 @@
 					<!--Genera el reporte HTML al finalizar la fase de los tests-->
 					<execution>
 						<id>report</id>
-						<phase>verify</phase>
+						<phase>test</phase>
 						<goals>
 							<goal>report</goal>
 						</goals>
